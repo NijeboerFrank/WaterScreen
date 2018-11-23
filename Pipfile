@@ -9,6 +9,7 @@ verify_ssl = true
 opencv-python = "*"
 imutils = "*"
 scipy = "*"
+pillow = "*"
 
 [requires]
 python_version = "3.7"
