@@ -7,8 +7,8 @@ from PIL import Image
 import os
 
 # Zet op True als je debug info wilt
-DEBUG = False
-TESTIMAGE = "test_images/181111-015510.jpg"
+DEBUG = True
+TESTIMAGE = "test_images/test5.jpg"
 PRINT_CNTS = False
 
 # Maak een dictionary zodat alle getallen hun weergave hebben.
@@ -128,15 +128,25 @@ def getNumberFromImage(image_location):
     digits = []
 
     previous_half = False
+    large = False
     i = 1
     for c in digitCnts:
         (x, y, w, h) = cv2.boundingRect(c)
         if not previous_half:
             if w < 20 or h < 50:
-                if DEBUG:
-                    print("It is a one or a zero")
-                previous_half = True
-                continue
+                if w < 20 and h > 50:
+                    digits.append(1)
+                    print("It's a one that fits in one rectangle")
+                    continue
+                else:
+                    if DEBUG:
+                        print("It is a one or a zero or a seven")
+                    if w > 20:
+                        print("probably seven")
+                        large = True
+
+                    previous_half = True
+                    continue
             roi = thresh[y:y + h, x:x + w]
             if DEBUG:
                 writeImage("roi %s" % i, roi)
@@ -160,6 +170,9 @@ def getNumberFromImage(image_location):
             ]
             # Maak een array met allemaal nullen
             on = [0] * len(segments)
+            wholeThing = cv2.countNonZero(roi)
+            if wholeThing /float(w * h) > 0.45:
+                continue
 
             for (i, ((xA, yA), (xB, yB))) in enumerate(segments):
                 # extract the segment ROI, count the total number of
@@ -182,9 +195,14 @@ def getNumberFromImage(image_location):
                 print("Digit is: %s" % (digit))
             digits.append(digit)
         elif previous_half and h < 50 and w < 20:
-            digits.append(1)
-            if DEBUG:
-                print("It is a one")
+            if large:
+                digits.append(7)
+                if DEBUG:
+                    print("It is a seven")
+            else:
+                digits.append(1)
+                if DEBUG:
+                    print("It is a one")
             previous_half = False
             continue
         elif previous_half and h < 50:
