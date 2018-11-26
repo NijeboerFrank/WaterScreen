@@ -8,7 +8,7 @@ import os
 
 # Zet op True als je debug info wilt
 DEBUG = False
-TESTIMAGE = "test_images/test22.jpg"
+TESTIMAGE = "test_images/test1.jpg"
 PRINT_CNTS = False
 
 # Maak een dictionary zodat alle getallen hun weergave hebben.
@@ -26,9 +26,11 @@ GETALLEN_DICTIONARY = {
     (1, 1, 1, 1, 0, 1, 1): 9
 }
 
+
 # Schrijf een plaatje naar een bestand
 def writeImage(name, image):
-    cv2.imwrite(name + ".jpg",image)
+    cv2.imwrite(name + ".jpg", image)
+
 
 # Verwijder de debug files.
 def removeDebug():
@@ -51,15 +53,9 @@ def removeDebug():
     os.remove("thresh.jpg")
     os.remove("warped.jpg")
 
-# Functie die de getallen van het plaatje kan aflezen.
-def getNumberFromImage(image_location):
-    # Verwijder de oude debug files
-    try:
-        removeDebug()
-    except Exception:
-        print("Kon niet alle files vinden om te verwijderen")
 
-
+# Get the screen with the information from the picture
+def getScreen(image_location):
     # Maak een zwarte rand om het plaatje en sla het tijdelijk met de naam:
     # 'filename' + _border.jpg
     image_name = add_black_border(image_location)
@@ -107,7 +103,6 @@ def getNumberFromImage(image_location):
             if DEBUG:
                 writeImage("displayCnt", img)
 
-
     # Centreer het scherm.
     warped = four_point_transform(gray, displayCnt.reshape(4, 2))
     output = four_point_transform(image, displayCnt.reshape(4, 2))
@@ -116,6 +111,19 @@ def getNumberFromImage(image_location):
         writeImage("warped", warped)
         writeImage("output", output)
 
+    os.remove(image_name)
+    return warped
+
+
+# Functie die de getallen van het plaatje kan aflezen.
+def getNumberFromImage(image_location):
+    # Verwijder de oude debug files
+    try:
+        removeDebug()
+    except Exception:
+        print("Kon niet alle files vinden om te verwijderen")
+
+    warped = getScreen(image_location)
 
     # Maak het scherm geblurred zodat we hiermee kunnen werken
     blur = cv2.GaussianBlur(warped, (7, 7), 0)
@@ -156,13 +164,11 @@ def getNumberFromImage(image_location):
             digitCnts.append(c)
 
     if DEBUG:
-        cijfers = output.copy()
+        cijfers = warped.copy()
         for d in digitCnts:
             x, y, w, h = cv2.boundingRect(d)
             cijfers = cv2.rectangle(cijfers, (x, y), (x + w, y + h), (0, 255, 0), 2)
         writeImage("cijfers_met_rechthoek", cijfers)
-
-    os.remove(image_name)
 
     # Sorteer de contouren van links naar rechts.
     digitCnts = contours.sort_contours(digitCnts,
@@ -223,7 +229,7 @@ def getNumberFromImage(image_location):
             # Maak een array met allemaal nullen
             on = [0] * len(segments)
             wholeThing = cv2.countNonZero(roi)
-            if wholeThing /float(w * h) > 0.45:
+            if wholeThing / float(w * h) > 0.45:
                 continue
 
             for (i, ((xA, yA), (xB, yB))) in enumerate(segments):
@@ -239,7 +245,6 @@ def getNumberFromImage(image_location):
                 # Voor linksboven gaat het iets anders door de vorm van de getallen
                 elif xA == 5 and total / float(area) > 0.45:
                     on[i] = 1
-
 
             try:
                 # Zoek naar een getal dat past bij de segment 'codering'
@@ -269,11 +274,13 @@ def getNumberFromImage(image_location):
             previous_half = False
 
     # Return het getal dat op het display staat
-    return(magic(digits))
+    return (magic(digits))
+
 
 # Method om een array van integers om te zetten in 1 integer
 def magic(numbers):
-    return int(''.join([ "%d"%x for x in numbers]))
+    return int(''.join(["%d" % x for x in numbers]))
+
 
 # Plak een plaatje op een zwart plaatje
 def add_black_border(image):
@@ -288,13 +295,28 @@ def add_black_border(image):
     new_im.save(name + "_border.jpg")
     return name + "_border.jpg"
 
+
+# Functie om linkerbovenhoek af te lezen
+def readTopLeft(image_location):
+    # Verwijder de oude debug files
+    try:
+        removeDebug()
+    except Exception:
+        print("Kon niet alle files vinden om te verwijderen")
+
+    warped = getScreen(image_location)
+
+    # TODO vanaf hier verder
+
 # Vergemakkelijkt een snelle test.
 def testImage():
     print("Solution is: %s" % (getNumberFromImage(TESTIMAGE)))
+
+
 try:
     removeDebug()
 except Exception:
     None
-if DEBUG:
-    testImage()
 
+if __name__ == "__main__":
+    testImage()
