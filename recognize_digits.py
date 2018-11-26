@@ -7,7 +7,7 @@ from PIL import Image
 import os
 
 # Zet op True als je debug info wilt
-DEBUG = True
+DEBUG = False
 TESTIMAGE = "test_images/test1.jpg"
 PRINT_CNTS = False
 
