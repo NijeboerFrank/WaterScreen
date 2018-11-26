@@ -8,7 +8,7 @@ import os
 
 # Zet op True als je debug info wilt
 DEBUG = False
-TESTIMAGE = "test_images/test1.jpg"
+TESTIMAGE = "test_images/test22.jpg"
 PRINT_CNTS = False
 
 # Maak een dictionary zodat alle getallen hun weergave hebben.
@@ -234,10 +234,10 @@ def getNumberFromImage(image_location):
 
                 # Als het aantal witte pixels groter is dan de helft
                 # geef dan waarde 1 aan dit segment.
-                if total / float(area) > 0.5:
+                if total / float(area) > 0.40:
                     on[i] = 1
                 # Voor linksboven gaat het iets anders door de vorm van de getallen
-                elif xA == 4 and total / float(area) > 0.45:
+                elif xA == 5 and total / float(area) > 0.45:
                     on[i] = 1
 
 
@@ -291,7 +291,10 @@ def add_black_border(image):
 # Vergemakkelijkt een snelle test.
 def testImage():
     print("Solution is: %s" % (getNumberFromImage(TESTIMAGE)))
-
+try:
+    removeDebug()
+except Exception:
+    None
 if DEBUG:
     testImage()
 
