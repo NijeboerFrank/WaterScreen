@@ -7,8 +7,8 @@ from PIL import Image
 import os
 
 # Zet op True als je debug info wilt
-DEBUG = True
-TESTIMAGE = "test_images/test5.jpg"
+DEBUG = False
+TESTIMAGE = "test_images/test7.jpg"
 PRINT_CNTS = False
 
 # Maak een dictionary zodat alle getallen hun weergave hebben.
