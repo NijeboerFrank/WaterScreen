@@ -7,8 +7,8 @@ from PIL import Image
 import os
 
 # Zet op True als je debug info wilt
-DEBUG = True
-TESTIMAGE = "test_images/181116-015510.jpg"
+DEBUG = False
+TESTIMAGE = "test_images/181111-015510.jpg"
 PRINT_CNTS = False
 
 # Maak een dictionary zodat alle getallen hun weergave hebben.
@@ -16,7 +16,7 @@ PRINT_CNTS = False
 GETALLEN_DICTIONARY = {
     (1, 1, 1, 0, 1, 1, 1): 0,
     (0, 0, 1, 0, 0, 1, 0): 1,
-    (1, 0, 1, 1, 1, 1, 0): 2,
+    (1, 0, 1, 1, 1, 0, 1): 2,
     (1, 0, 1, 1, 0, 1, 1): 3,
     (0, 1, 1, 1, 0, 1, 0): 4,
     (1, 1, 0, 1, 0, 1, 1): 5,
@@ -29,7 +29,7 @@ GETALLEN_DICTIONARY = {
 def writeImage(name, image):
     cv2.imwrite(name + ".jpg",image)
 
-def firstSteps(image_location):
+def getNumberFromImage(image_location):
     # Maak een zwarte rand om het plaatje en sla het tijdelijk met de naam:
     # 'filename' + _border.jpg
     image_name = add_black_border(image_location)
@@ -72,7 +72,8 @@ def firstSteps(image_location):
             displayCnt = approx
             x, y, w, h = cv2.boundingRect(displayCnt)
             img = cv2.rectangle(img, (x, y), (x + w, y + h), (0, 255, 0), 2)
-            writeImage("displayCnt", img)
+            if DEBUG:
+                writeImage("displayCnt", img)
 
 
     # Centreer het scherm.
@@ -94,8 +95,8 @@ def firstSteps(image_location):
     cnts = cv2.findContours(thresh.copy(), cv2.RETR_EXTERNAL,
                             cv2.CHAIN_APPROX_SIMPLE)
     cnts = cnts[0] if imutils.is_cv2() else cnts[1]
-
-    writeImage("counter_after_thresh", edges)
+    if DEBUG:
+        writeImage("counter_after_thresh", edges)
     digitCnts = []
 
     # loop over the digit area candidates
@@ -104,9 +105,10 @@ def firstSteps(image_location):
         (x, y, w, h) = cv2.boundingRect(c)
 
         # if the contour is sufficiently large, it must be a digit
-        if w >= 0 and (h >= 20 and h <= 100) and 260 >= x >= 130:
-            print(x)
-            print(y)
+        if w >= 0 and (h >= 20 and h <= 100) and 260 >= x >= 120:
+            if DEBUG:
+                print(x)
+                print(y)
             digitCnts.append(c)
 
     if DEBUG:
@@ -121,50 +123,80 @@ def firstSteps(image_location):
     # Sorteer de contouren van links naar rechts.
     digitCnts = contours.sort_contours(digitCnts,
                                        method="left-to-right")[0]
+    if DEBUG:
+        print("DigitCnts length is %s" % (len(digitCnts)))
     digits = []
 
-
+    previous_half = False
+    i = 1
     for c in digitCnts:
-        # extract the digit ROI
         (x, y, w, h) = cv2.boundingRect(c)
-        roi = thresh[y:y + h, x:x + w]
+        if not previous_half:
+            if w < 20 or h < 50:
+                if DEBUG:
+                    print("It is a one or a zero")
+                previous_half = True
+                continue
+            roi = thresh[y:y + h, x:x + w]
+            if DEBUG:
+                writeImage("roi %s" % i, roi)
+                i += 1
 
-        # compute the width and height of each of the 7 segments
-        # we are going to examine
-        (roiH, roiW) = roi.shape
-        (dW, dH) = (int(roiW * 0.25), int(roiH * 0.15))
-        dHC = int(roiH * 0.05)
+            # compute the width and height of each of the 7 segments
+            # we are going to examine
+            (roiH, roiW) = roi.shape
+            (dW, dH) = (int(roiW * 0.20), int(roiH * 0.15))
+            dHC = int(roiH * 0.05)
 
-        # define the set of 7 segments
-        segments = [
-            ((0, 0), (w, dH)),  # top
-            ((0, 0), (dW, h // 2)),  # top-left
-            ((w - dW, 0), (w, h // 2)),  # top-right
-            ((0, (h // 2) - dHC), (w, (h // 2) + dHC)),  # center
-            ((0, h // 2), (dW, h)),  # bottom-left
-            ((w - dW, h // 2), (w, h)),  # bottom-right
-            ((0, h - dH), (w, h))  # bottom
-        ]
-        on = [0] * len(segments)
+            # define the set of 7 segments
+            segments = [
+                ((4, 0), (w, dH)),  # top
+                ((5, 0), (dW + 5, h // 2)),  # top-left
+                ((w - dW, 0), (w, h // 2)),  # top-right
+                ((0, (h // 2) - dHC), (w, (h // 2) + dHC)),  # center
+                ((0, h // 2), (dW, h)),  # bottom-left
+                ((w - dW - 5, h // 2), (w - 3, h)),  # bottom-right
+                ((0, h - dH), (w, h))  # bottom
+            ]
+            # Maak een array met allemaal nullen
+            on = [0] * len(segments)
 
-    for (i, ((xA, yA), (xB, yB))) in enumerate(segments):
-        # extract the segment ROI, count the total number of
-        # thresholded pixels in the segment, and then compute
-        # the area of the segment
-        segROI = roi[yA:yB, xA:xB]
-        total = cv2.countNonZero(segROI)
-        area = (xB - xA) * (yB - yA)
+            for (i, ((xA, yA), (xB, yB))) in enumerate(segments):
+                # extract the segment ROI, count the total number of
+                # thresholded pixels in the segment, and then compute
+                # the area of the segment
+                segROI = roi[yA:yB, xA:xB]
+                total = cv2.countNonZero(segROI)
+                area = (xB - xA) * (yB - yA)
 
-        # if the total number of non-zero pixels is greater than
-        # 50% of the area, mark the segment as "on"
-        if total / float(area) > 0.5:
-            on[i] = 1
+                # if the total number of non-zero pixels is greater than
+                # 50% of the area, mark the segment as "on"
+                if total / float(area) > 0.5:
+                    on[i] = 1
+                elif xA == 4 and total / float(area) > 0.45:
+                    on[i] = 1
 
-        # lookup the digit and draw it on the image
-    digit = GETALLEN_DICTIONARY[tuple(on)]
-    digits.append(digit)
-    for digi in digits:
-        print(digi)
+                # lookup the digit and draw it on the image
+            digit = GETALLEN_DICTIONARY[tuple(on)]
+            if DEBUG:
+                print("Digit is: %s" % (digit))
+            digits.append(digit)
+        elif previous_half and h < 50 and w < 20:
+            digits.append(1)
+            if DEBUG:
+                print("It is a one")
+            previous_half = False
+            continue
+        elif previous_half and h < 50:
+            if DEBUG:
+                print("it must be zero")
+            digits.append(0)
+            previous_half = False
+
+    return(magic(digits))
+
+def magic(numbers):
+    return int(''.join([ "%d"%x for x in numbers]))
 
 
 def add_black_border(image):
@@ -180,8 +212,8 @@ def add_black_border(image):
     return name + "_border.jpg"
 
 def testImage():
-    firstSteps(TESTIMAGE)
-
+    print("Solution is: %s" % (getNumberFromImage(TESTIMAGE)))
 
 if DEBUG:
     testImage()
+
