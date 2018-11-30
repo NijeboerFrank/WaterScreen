@@ -111,7 +111,8 @@ def getScreen(image_location):
         writeImage("warped", warped)
         writeImage("output", output)
 
-    os.remove(image_name)
+    if not DEBUG:
+        os.remove(image_name)
     return warped
 
 
@@ -121,7 +122,8 @@ def getNumberFromImage(image_location):
     try:
         removeDebug()
     except Exception:
-        print("Kon niet alle files vinden om te verwijderen")
+        if DEBUG:
+            print("Kon niet alle files vinden om te verwijderen")
 
     warped = getScreen(image_location)
 
