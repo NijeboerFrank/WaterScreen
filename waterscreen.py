@@ -8,7 +8,7 @@ import os
 
 # Zet op True als je debug info wilt
 DEBUG = False
-TESTIMAGE = "test_images/test21_error.jpg"
+TESTIMAGE = "test_images/rc3.jpg"
 PRINT_CNTS = False
 
 # Maak een dictionary zodat alle getallen hun weergave hebben.
@@ -68,6 +68,10 @@ def removeDebug():
     try:
         os.remove("waar_is_error.jpg")
         os.remove("errorthresh.jpg")
+    except:
+        pass
+    try:
+        os.remove("rechthoeken_rc.jpg")
     except:
         pass
 
@@ -343,19 +347,26 @@ def getRC(image_location):
     if total_white / float(total_area) > 0.80:
         return False
 
-    # Aantal segment die in RC moeten zitten
+    # Aantal segmenten die in RC moeten zitten
     segments = [
-        ((int(24/241 * wwarped), int(32/83 * hwarped)), (int(42/241 * wwarped), int(38/83 * hwarped))),
-        ((int(26/241 * wwarped), int(18/83 * hwarped)), (int(30/241 * wwarped), int(34/83 * hwarped))),
+        ((int(26/241 * wwarped), int(32/83 * hwarped)), (int(44/241 * wwarped), int(38/83 * hwarped))),
+        ((int(28/241 * wwarped), int(18/83 * hwarped)), (int(32/241 * wwarped), int(34/83 * hwarped))),
         ((int(6/241 * wwarped), 0), (int(9/241* wwarped), int(13/83 * hwarped))),
-        ((int(29/241 * wwarped), 0), (int(33/241 * wwarped), int(15/ 83 * hwarped)))
+        ((int(31/241 * wwarped), 2), (int(35/241 * wwarped), int(15 / 83 * hwarped)))
     ]
+
 
     for (i, ((xA, yA), (xB, yB))) in enumerate(segments):
         # Pak het ingezoomde fragment
         segment = rc[yA:yB, xA:xB]
         total = cv2.countNonZero(segment)
         area = (xB - xA) * (yB - yA)
+
+        kopie = warped[y:y+h, x:x+w]
+        kopie = cv2.rectangle(kopie, (xA, yA), (xB, yB), (0, 255, 0), 1)
+
+        if DEBUG:
+           writeImage("rechthoeken_rc", kopie)
 
         # Als het aantal witte pixels groter is dan de 50 %
         # ga dan door naar de volgende
