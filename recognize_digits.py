@@ -8,7 +8,7 @@ import os
 
 # Zet op True als je debug info wilt
 DEBUG = False
-TESTIMAGE = "test_images/rc4.jpg"
+TESTIMAGE = "test_images/test21_error.jpg"
 PRINT_CNTS = False
 
 # Maak een dictionary zodat alle getallen hun weergave hebben.
@@ -63,6 +63,11 @@ def removeDebug():
         os.remove("RCHoek.jpg")
         os.remove("thresh_read.jpg")
         os.remove("warped_read.jpg")
+    except:
+        pass
+    try:
+        os.remove("waar_is_error.jpg")
+        os.remove("errorthresh.jpg")
     except:
         pass
 
@@ -363,6 +368,47 @@ def readTopLeft(image_location):
     return True
 
 
+# Kijkt of er een error is
+def checkError(image_file):
+
+    warped = getScreen(image_file)
+
+    (xwarped, ywarped, wwarped, hwarped) = cv2.boundingRect(warped)
+
+    # Maak het scherm geblurred zodat we hiermee kunnen werken
+    blur = cv2.GaussianBlur(warped, (7, 7), 0)
+
+    # Maak een threshold afbeelding van het plaatje
+    thresh = cv2.adaptiveThreshold(blur, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV, 51, 2)
+
+    # Dit zijn de coordinaten waar error moet staan
+    (x, y, w, h) = (int(41/308 * wwarped), int(57/106 * hwarped), int(24/308 * wwarped), int(24/106 * hwarped))
+
+    copy = warped.copy()
+    copy = cv2.rectangle(copy, (x, y), (x + w, y + h), (0, 255, 0), 2)
+    if DEBUG:
+        writeImage("waar_is_error", copy)
+
+    # Pak het gedeelte waar error zou moeten staan
+    rc = thresh[y:y+h, x:x+w]
+    if DEBUG:
+        writeImage("errorthresh", rc)
+
+    total_white = cv2.countNonZero(rc)
+    total_area = (w * h)
+
+    # Er is een error als er wat in dit vakje staat
+    if total_white / float(total_area) > 0.60:
+        return True
+    return False
+
+
+
+def getNumber(image_file):
+    ret = getNumberFromImage(image_file)
+    if readTopLeft(image_file):
+        ret *= -1
+    return ret
 
 # Vergemakkelijkt een snelle test.
 def testImage():
@@ -370,6 +416,11 @@ def testImage():
     print("Solution is: %s" % solution)
     rc = readTopLeft(TESTIMAGE)
     print("RC is %s" % rc)
+    error = "no"
+    if checkError(TESTIMAGE):
+        error = "an"
+
+    print("There is %s error" % error)
     if rc:
         print("Het betekent dus eigenlijk -%s" % solution)
     if not DEBUG:
