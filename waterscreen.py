@@ -8,7 +8,7 @@ import os
 
 # Zet op True als je debug info wilt
 DEBUG = False
-TESTIMAGE = "test_images/rc3.jpg"
+TESTIMAGE = "test_images/9.jpg"
 PRINT_CNTS = False
 
 # Maak een dictionary zodat alle getallen hun weergave hebben.
@@ -140,14 +140,13 @@ def getScreen(image_location):
 
 # Functie die de getallen van het plaatje kan aflezen.
 def getNumberFromImage(image_location):
-
     warped = getScreen(image_location)
 
     # Maak het scherm geblurred zodat we hiermee kunnen werken
     blur = cv2.GaussianBlur(warped, (7, 7), 0)
 
     # Maak een threshold afbeelding van het plaatje zodat de contouren goed te zien zijn.
-    thresh = cv2.adaptiveThreshold(blur, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV, 91, 2)
+    thresh = cv2.adaptiveThreshold(blur, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV, 51, 2)
 
     if DEBUG:
         writeImage("thresh", thresh)
@@ -173,7 +172,7 @@ def getNumberFromImage(image_location):
         # Als de contour een hoogte heeft van tussen de 20 en 100 kan het
         # een getal zijn. Ik check ook of de rechthoek ver genoeg naar rechts ligt zodat
         # we niet door alle rechthoeken heen hoeven die toch geen getallen kunnen zijn.
-        if (20 <= h <= 100) and 260 >= x >= 90:
+        if (20 <= h <= 100) and 170 >= x >= 70:
 
             if DEBUG:
                 print(x)
@@ -200,13 +199,17 @@ def getNumberFromImage(image_location):
     previous_half = False
     large = False
     roi_number = 1
+    number = 1
     for c in digitCnts:
+        if DEBUG:
+            print("We are at number %s" % number)
+            number += 1
         # Coordinaten van een rechthoek weer.
         (x, y, w, h) = cv2.boundingRect(c)
         if not previous_half:
             # Als de rechthoek niet groot genoeg is voor een heel getal
-            if w < 20 or h < 50:
-                if w < 20 and h > 50:
+            if w < 15 or h < 30:
+                if w < 20 and h > 40:
                     digits.append(1)
                     print("It's a one that fits in one rectangle")
                     continue
@@ -235,19 +238,19 @@ def getNumberFromImage(image_location):
 
             # Hier worden echt de segmenten gemaakt.
             segments = [
-                ((4, 0), (w, dH)),  # top
-                ((5, 0), (dW + 5, h // 2)),  # top-left
+                ((0, 0), (w, dH)),  # top
+                ((0, 0), (dW, h // 2)),  # top-left
                 ((w - dW, 0), (w, h // 2)),  # top-right
                 ((0, (h // 2) - dHC), (w, (h // 2) + dHC)),  # center
                 ((0, h // 2), (dW, h)),  # bottom-left
-                ((w - dW - 5, h // 2), (w - 5, h)),  # bottom-right
+                ((w - dW, h // 2), (w, h)),  # bottom-right
                 ((0, h - dH), (w, h))  # bottom
             ]
 
             # Maak een array met allemaal nullen
             on = [0] * len(segments)
             wholeThing = cv2.countNonZero(roi)
-            if wholeThing / float(w * h) > 0.45:
+            if wholeThing / float(w * h) > 0.60:
                 continue
 
             for (i, ((xA, yA), (xB, yB))) in enumerate(segments):
@@ -260,9 +263,7 @@ def getNumberFromImage(image_location):
                 # geef dan waarde 1 aan dit segment.
                 if total / float(area) > 0.40:
                     on[i] = 1
-                # Voor linksboven gaat het iets anders door de vorm van de getallen
-                elif xA == 5 and total / float(area) > 0.45:
-                    on[i] = 1
+
 
             try:
                 # Zoek naar een getal dat past bij de segment 'codering'
@@ -279,6 +280,7 @@ def getNumberFromImage(image_location):
                 digits.append(7)
                 if DEBUG:
                     print("It is a seven")
+                large = False
             else:
                 digits.append(1)
                 if DEBUG:
@@ -316,7 +318,6 @@ def add_black_border(image):
 
 # Functie om linkerbovenhoek af te lezen
 def getRC(image_location):
-
     warped = getScreen(image_location)
 
     (xwarped, ywarped, wwarped, hwarped) = cv2.boundingRect(warped)
@@ -328,7 +329,7 @@ def getRC(image_location):
     thresh = cv2.adaptiveThreshold(blur, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV, 51, 2)
 
     # Dit zijn de coordinaten waar RC moet staan
-    (x, y, w, h) = (int(24/241 * wwarped), int(4/83 * hwarped), int(48/241 * wwarped), int(39/83 * hwarped))
+    (x, y, w, h) = (int(24 / 241 * wwarped), int(4 / 83 * hwarped), int(48 / 241 * wwarped), int(39 / 83 * hwarped))
 
     copy = warped.copy()
     copy = cv2.rectangle(copy, (x, y), (x + w, y + h), (0, 255, 0), 2)
@@ -336,7 +337,7 @@ def getRC(image_location):
         writeImage("waar_is_rc", copy)
 
     # Pak het gedeelte waar RC zou moeten staan
-    rc = thresh[y:y+h, x:x+w]
+    rc = thresh[y:y + h, x:x + w]
     if DEBUG:
         writeImage("RCHoek", rc)
 
@@ -349,12 +350,11 @@ def getRC(image_location):
 
     # Aantal segmenten die in RC moeten zitten
     segments = [
-        ((int(26/241 * wwarped), int(32/83 * hwarped)), (int(44/241 * wwarped), int(38/83 * hwarped))),
-        ((int(28/241 * wwarped), int(18/83 * hwarped)), (int(32/241 * wwarped), int(34/83 * hwarped))),
-        ((int(6/241 * wwarped), 0), (int(9/241* wwarped), int(13/83 * hwarped))),
-        ((int(31/241 * wwarped), 2), (int(35/241 * wwarped), int(15 / 83 * hwarped)))
+        ((int(26 / 241 * wwarped), int(32 / 83 * hwarped)), (int(44 / 241 * wwarped), int(38 / 83 * hwarped))),
+        ((int(28 / 241 * wwarped), int(18 / 83 * hwarped)), (int(32 / 241 * wwarped), int(34 / 83 * hwarped))),
+        ((int(6 / 241 * wwarped), 0), (int(9 / 241 * wwarped), int(13 / 83 * hwarped))),
+        ((int(31 / 241 * wwarped), 2), (int(35 / 241 * wwarped), int(15 / 83 * hwarped)))
     ]
-
 
     for (i, ((xA, yA), (xB, yB))) in enumerate(segments):
         # Pak het ingezoomde fragment
@@ -362,15 +362,15 @@ def getRC(image_location):
         total = cv2.countNonZero(segment)
         area = (xB - xA) * (yB - yA)
 
-        kopie = warped[y:y+h, x:x+w]
+        kopie = warped[y:y + h, x:x + w]
         kopie = cv2.rectangle(kopie, (xA, yA), (xB, yB), (0, 255, 0), 1)
 
         if DEBUG:
-           writeImage("rechthoeken_rc", kopie)
+            writeImage("rechthoeken_rc", kopie)
 
         # Als het aantal witte pixels groter is dan de 50 %
         # ga dan door naar de volgende
-        if total / float(area) > 0.50:
+        if total / float(area) > 0.40:
             continue
         else:
             return False
@@ -381,7 +381,6 @@ def getRC(image_location):
 
 # Kijkt of er een error is
 def checkError(image_file):
-
     warped = getScreen(image_file)
 
     (xwarped, ywarped, wwarped, hwarped) = cv2.boundingRect(warped)
@@ -393,7 +392,7 @@ def checkError(image_file):
     thresh = cv2.adaptiveThreshold(blur, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV, 51, 2)
 
     # Dit zijn de coordinaten waar error moet staan
-    (x, y, w, h) = (int(41/308 * wwarped), int(57/106 * hwarped), int(24/308 * wwarped), int(24/106 * hwarped))
+    (x, y, w, h) = (int(41 / 308 * wwarped), int(57 / 106 * hwarped), int(24 / 308 * wwarped), int(24 / 106 * hwarped))
 
     copy = warped.copy()
     copy = cv2.rectangle(copy, (x, y), (x + w, y + h), (0, 255, 0), 2)
@@ -401,7 +400,7 @@ def checkError(image_file):
         writeImage("waar_is_error", copy)
 
     # Pak het gedeelte waar error zou moeten staan
-    rc = thresh[y:y+h, x:x+w]
+    rc = thresh[y:y + h, x:x + w]
     if DEBUG:
         writeImage("errorthresh", rc)
 
@@ -414,12 +413,12 @@ def checkError(image_file):
     return False
 
 
-
 def getNumber(image_file):
     ret = getNumberFromImage(image_file)
     if getRC(image_file):
         ret *= -1
     return ret
+
 
 # Vergemakkelijkt een snelle test.
 def testImage():
