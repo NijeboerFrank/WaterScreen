@@ -1,5 +1,5 @@
 import unittest
-import recognize_digits as d
+import waterscreen as d
 
 class TestFiles(unittest.TestCase):
 

@@ -267,7 +267,7 @@ def getNumberFromImage(image_location):
                 if DEBUG:
                     print("Digit is: %s" % (digit))
             except Exception as e:
-                print("kon deze niet herkennen: %s" % e)
+                print("Could not recognize this segment: %s" % e)
 
         # Checks voor de 'gekke' getallen
         elif previous_half and h < 50 and w < 20:
@@ -311,7 +311,7 @@ def add_black_border(image):
 
 
 # Functie om linkerbovenhoek af te lezen
-def readTopLeft(image_location):
+def getRC(image_location):
 
     warped = getScreen(image_location)
 
@@ -406,7 +406,7 @@ def checkError(image_file):
 
 def getNumber(image_file):
     ret = getNumberFromImage(image_file)
-    if readTopLeft(image_file):
+    if getRC(image_file):
         ret *= -1
     return ret
 
@@ -414,7 +414,7 @@ def getNumber(image_file):
 def testImage():
     solution: int = getNumberFromImage(TESTIMAGE)
     print("Solution is: %s" % solution)
-    rc = readTopLeft(TESTIMAGE)
+    rc = getRC(TESTIMAGE)
     print("RC is %s" % rc)
     error = "no"
     if checkError(TESTIMAGE):
@@ -427,13 +427,13 @@ def testImage():
         try:
             removeDebug()
         except Exception:
-            None
+            pass
 
 
 try:
     removeDebug()
 except Exception:
-    None
+    pass
 
 if __name__ == "__main__":
     testImage()
