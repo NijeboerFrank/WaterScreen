@@ -8,7 +8,7 @@ import os
 
 # Zet op True als je debug info wilt
 DEBUG = False
-TESTIMAGE = "test_images/test1.jpg"
+TESTIMAGE = "test_images/rc4.jpg"
 PRINT_CNTS = False
 
 # Maak een dictionary zodat alle getallen hun weergave hebben.
@@ -34,13 +34,16 @@ def writeImage(name, image):
 
 # Verwijder de debug files.
 def removeDebug():
-    os.remove("blurred.jpg")
-    os.remove("cijfers_met_rechthoek.jpg")
-    os.remove("counter_after_thresh.jpg")
-    os.remove("displayCnt.jpg")
-    os.remove("edged.jpg")
-    os.remove("gray.jpg")
-    os.remove("output.jpg")
+    try:
+        os.remove("blurred.jpg")
+        os.remove("cijfers_met_rechthoek.jpg")
+        os.remove("counter_after_thresh.jpg")
+        os.remove("displayCnt.jpg")
+        os.remove("edged.jpg")
+        os.remove("gray.jpg")
+        os.remove("output.jpg")
+    except:
+        pass
     try:
         os.remove("roi 1.jpg")
         os.remove("roi 2.jpg")
@@ -48,10 +51,20 @@ def removeDebug():
         os.remove("roi 4.jpg")
         os.remove("roi 5.jpg")
         os.remove("roi 6.jpg")
-    except Exception as e:
-        print(e)
-    os.remove("thresh.jpg")
-    os.remove("warped.jpg")
+    except:
+        pass
+    try:
+        os.remove("thresh.jpg")
+        os.remove("warped.jpg")
+    except:
+        pass
+    try:
+        os.remove("waar_is_rc.jpg")
+        os.remove("RCHoek.jpg")
+        os.remove("thresh_read.jpg")
+        os.remove("warped_read.jpg")
+    except:
+        pass
 
 
 # Get the screen with the information from the picture
@@ -300,19 +313,76 @@ def add_black_border(image):
 
 # Functie om linkerbovenhoek af te lezen
 def readTopLeft(image_location):
-    # Verwijder de oude debug files
-    try:
-        removeDebug()
-    except Exception:
-        print("Kon niet alle files vinden om te verwijderen")
 
     warped = getScreen(image_location)
 
-    # TODO vanaf hier verder
+    (xwarped, ywarped, wwarped, hwarped) = cv2.boundingRect(warped)
+
+    # Maak het scherm geblurred zodat we hiermee kunnen werken
+    blur = cv2.GaussianBlur(warped, (7, 7), 0)
+
+    # Maak een threshold afbeelding van het plaatje zodat de contouren goed te zien zijn.
+    thresh = cv2.adaptiveThreshold(blur, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV, 51, 2)
+
+    # Dit zijn de coordinaten waar RC moet staan
+    (x, y, w, h) = (int(24/241 * wwarped), int(4/83 * hwarped), int(48/241 * wwarped), int(39/83 * hwarped))
+
+    copy = warped.copy()
+    copy = cv2.rectangle(copy, (x, y), (x + w, y + h), (0, 255, 0), 2)
+    if DEBUG:
+        writeImage("waar_is_rc", copy)
+
+    # Pak het gedeelte waar RC zou moeten staan
+    rc = thresh[y:y+h, x:x+w]
+    if DEBUG:
+        writeImage("RCHoek", rc)
+
+    # Als bijna het hele vakje wit is dan is de meting niet betrouwbaar
+    total_white = cv2.countNonZero(rc)
+    total_area = (w * h)
+
+    if total_white / float(total_area) > 0.80:
+        return False
+
+    # Aantal segment die in RC moeten zitten
+    segments = [
+        ((int(24/241 * wwarped), int(32/83 * hwarped)), (int(42/241 * wwarped), int(38/83 * hwarped))),
+        ((int(26/241 * wwarped), int(18/83 * hwarped)), (int(30/241 * wwarped), int(34/83 * hwarped))),
+        ((int(6/241 * wwarped), 0), (int(9/241* wwarped), int(13/83 * hwarped))),
+        ((int(29/241 * wwarped), 0), (int(33/241 * wwarped), int(15/ 83 * hwarped)))
+    ]
+
+    for (i, ((xA, yA), (xB, yB))) in enumerate(segments):
+        # Pak het ingezoomde fragment
+        segment = rc[yA:yB, xA:xB]
+        total = cv2.countNonZero(segment)
+        area = (xB - xA) * (yB - yA)
+
+        # Als het aantal witte pixels groter is dan de 50 %
+        # ga dan door naar de volgende
+        if total / float(area) > 0.50:
+            continue
+        else:
+            return False
+
+    # Als ze allemaal wit zijn dan staat er RC
+    return True
+
+
 
 # Vergemakkelijkt een snelle test.
 def testImage():
-    print("Solution is: %s" % (getNumberFromImage(TESTIMAGE)))
+    solution: int = getNumberFromImage(TESTIMAGE)
+    print("Solution is: %s" % solution)
+    rc = readTopLeft(TESTIMAGE)
+    print("RC is %s" % rc)
+    if rc:
+        print("Het betekent dus eigenlijk -%s" % solution)
+
+    try:
+        removeDebug()
+    except Exception:
+        None
 
 
 try:
