@@ -131,12 +131,6 @@ def getScreen(image_location):
 
 # Functie die de getallen van het plaatje kan aflezen.
 def getNumberFromImage(image_location):
-    # Verwijder de oude debug files
-    try:
-        removeDebug()
-    except Exception:
-        if DEBUG:
-            print("Kon niet alle files vinden om te verwijderen")
 
     warped = getScreen(image_location)
 
@@ -378,11 +372,11 @@ def testImage():
     print("RC is %s" % rc)
     if rc:
         print("Het betekent dus eigenlijk -%s" % solution)
-
-    try:
-        removeDebug()
-    except Exception:
-        None
+    if not DEBUG:
+        try:
+            removeDebug()
+        except Exception:
+            None
 
 
 try:
